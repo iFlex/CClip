@@ -1,6 +1,10 @@
 {
-	"shortcuts":
+	"commands":
 	{
-		"exit":["CTRL","z"]
+		"exit":["ctrl","z"],
+		"copy":["ctrl","c"],
+		"paste":["ctrl","v"],
+		"netstart":["ctrl","o"],
+		"netstop":["ctrl","p"]
 	}
 }

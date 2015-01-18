@@ -23,7 +23,7 @@ function onClipboardOut(data){
 	var str = "";
 	for( i = 0 ; i < data.length; ++i )
 		str += String.fromCharCode(data[i]);
-	console.log("Fetched clipboard from remote."+typeof(data));
+	console.log("Fetched clipboard from remote.");
 	clipb.copy(str,clipboardReady);
 }
 function onClipboardRequired(){
@@ -39,34 +39,40 @@ function onClipboardEvent(data){
 	clipb.paste(onClipboardIn);
 }
 
-
-kmon.addHook({key:'v',specials:['ctrl'],callback:onClipboardRequired});
-kmon.addHook({key:'c',specials:['ctrl'],callback:onClipboardEvent});
-kmon.addHook({key:'x',specials:['ctrl'],callback:onClipboardEvent});
-kmon.addHook({key:'o',specials:['ctrl'],callback:function(){net.start();} });
-kmon.addHook({key:'p',specials:['ctrl'],callback:function(){net.stop();}});
-kmon.addHook({key:'z',specials:['ctrl'],callback:function(){kmon.stop();net.stop();process.exit();}});
-
-
-if( config.shortcuts ){
+function exit(){
+	kmon.stop();net.stop();process.exit();
+}
+//applying configuration
+if( config.commands ){
 	try{
-	for( k in config.shortcuts ){
-		var hook = {specials:[]};
-		for( c in config.shortcuts[k] ){
-			if( config.shortcuts[k][c].length == 1 )
-				hook.key = config.shortcuts[k][c];
-			else
-				hook.specials.push(config.shortcuts[k][c].toLower());
-		}
-		console.log("cfg("+k+"):"+hook);
-		if(k == "exit")
-			hook.callback = function(){
-				config.stop();
+		for( k in config.commands ){
+			console.log("cfgcmd:"+k);
+			var hook = {specials:[]};
+			for( c = 0; c < config.commands[k].length; ++c )
+			{
+				if( config.commands[k][c].length == 1 )
+					hook.key = config.commands[k][c];
+				else
+					hook.specials.push(config.commands[k][c]);
 			}
-		config.addHook(hook);
-	}
+			if(k == "exit")
+				hook.callback = exit;
+			if(k == "netstop")
+				hook.callback = net.stop;
+			if(k == "netstart")
+				hook.callback = net.start;
+			if(k == "copy")
+				hook.callback = onClipboardEvent; 
+			if(k == "paste")
+				hook.callback = onClipboardRequired;
+			
+			kmon.addHook(hook);
+		}
 	}
 	catch(e){
+		console.log("Failed to apply configuration:"+e);
+		console.log("Use ctrl+z to exit");
+		kmon.addHook({key:'z',specials:['ctrl'],callback:exit});
 	}
 }
 console.log("Clipboard monitor running");
