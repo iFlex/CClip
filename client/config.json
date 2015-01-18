@@ -1,4 +1,6 @@
 {
+	"server":"ec2-54-69-88-224.us-west-2.compute.amazonaws.com",
+	"port":80,
 	"commands":
 	{
 		"exit":["ctrl","z"],

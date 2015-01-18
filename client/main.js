@@ -45,6 +45,11 @@ function exit(){
 //applying configuration
 if( config.commands ){
 	try{
+		if(config.server)
+			net.setServer(config.server);
+		if(config.port)
+			net.setPort(config.port);
+		
 		for( k in config.commands ){
 			console.log("cfgcmd:"+k);
 			var hook = {specials:[]};

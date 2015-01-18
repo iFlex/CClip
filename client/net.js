@@ -85,6 +85,13 @@ function net(){
 		ready = false;
 		console.log("Net: disconnected from "+server+":"+port);
 	}
+
+	this.setServer = function(s){
+		server = s;
+	}
+	this.setPort = function(p){
+		port = p;
+	}
 }
 
 module.exports = new net();
