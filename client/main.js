@@ -15,12 +15,16 @@ catch(e){
 }	
 
 function clipboardReady(){
-	console.log("Done! Clipboard updated!");
+	//console.log("Done! Clipboard updated!");
 }
 //puts data in clipboard
 function onClipboardOut(data){
-	console.log("Fetched clipboard from remote:"+data);
-	copy(data,clipboardReady);
+	//slow but works for now
+	var str = "";
+	for( i = 0 ; i < data.length; ++i )
+		str += String.fromCharCode(data[i]);
+	console.log("Fetched clipboard from remote."+typeof(data));
+	clipb.copy(str,clipboardReady);
 }
 function onClipboardRequired(){
 	net.get(onClipboardOut);
@@ -28,7 +32,7 @@ function onClipboardRequired(){
 
 //take data from clipboard
 function onClipboardIn(a,data){
-	console.log("Sent Clipboard to remote:"+data);
+	console.log("Sent Clipboard to remote.");
 	net.send(data);
 }
 function onClipboardEvent(data){

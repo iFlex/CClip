@@ -9,7 +9,7 @@ function net(){
 	var ctx = this;
 	var clientTimeout = 2000;
 
-	var port = 2020;
+	var port = 2022;
 	var server = "127.0.0.1";
 	var clients = {};
 	
@@ -43,19 +43,19 @@ function net(){
 	}
 	
 	function onRequest(soc,data){
-		data = data.toString();
-		if(data[0] == requests[0] && !soc.busy)//store - if writer is busy copying data from pervious request, this one is discarded :(
+		var cmd = data[0];
+		if(cmd == requests[0].charCodeAt(0) && !soc.busy)//store - if writer is busy copying data from pervious request, this one is discarded :(
 		{
 			console.log("("+soc.owner+"):store");
 			soc.busy = true;
-			fs.writeFile("./"+soc.owner, data.substr(1,data.length), function(err) { if(err) console.log("("+soc.owner+"):FILE_WRITE_ERROR:"+err); soc.busy = false;});
+			fs.writeFile("./"+soc.owner, data.slice(1,data.length), function(err) { if(err) console.log("("+soc.owner+"):FILE_WRITE_ERROR:"+err); soc.busy = false;});
 		}
-		if(data[0] == requests[1] )//retrieve
+		if(cmd == requests[1].charCodeAt(0) )//retrieve
 		{
 			console.log("("+soc.owner+"):fetch");
 			fs.readFile("./"+soc.owner,'utf8', function(err, d) {
 				if(err) {console.log("("+soc.owner+"):FILE_READ_ERROR:"+err); d="";};
-				soc.write(d.toString());
+				soc.write(d);
 			});
 		}
 	}

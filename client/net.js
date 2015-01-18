@@ -8,7 +8,7 @@ function net(){
 	var user = "iFlex";
 	var pwd = "test";
 	var server = "127.0.0.1";
-	var port = 2020;
+	var port = 2022;
 	
 	var socket = 0;
 	var maxTimeout = 10000;
@@ -20,7 +20,7 @@ function net(){
 
 	function onData(data){
 		try{
-			onDataReady(data.toString());
+			onDataReady(data);
 		}
 		catch(e){
 
@@ -62,8 +62,8 @@ function net(){
 	this.send = function(data){
 		if(ready && socket)
 		{
-			console.log("Sending:"+data);
-			var result = socket.write(requests[0]+JSON.stringify(data));
+			var dta = new Buffer(requests[0]+data);
+			var result = socket.write(dta);
 		}
 	}
 	
@@ -72,6 +72,7 @@ function net(){
 		{
 			var result = socket.write(requests[1]);
 			onDataReady = callback;
+			console.log("Asked for remote clipboard");
 		}
 	}
 
