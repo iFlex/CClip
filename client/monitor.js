@@ -6,6 +6,7 @@ function monitor(){
 	var context;
 	function recognise(ch,key){
 		//get the hooks set for the pressed key
+		//console.log(key.name,key);
 		var hook = hooks[key.name];
 		if(hook)
 		{

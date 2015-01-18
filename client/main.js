@@ -1,6 +1,10 @@
 //read config
 require('./lib/include-path')('./lib');
 var fs = require('fs');
+var clipb = require('copy-paste');
+var kmon = require('./monitor');
+var net = require('./net');
+
 var config = {};
 try{
 	var bfr = fs.readFileSync('config.json');
@@ -8,20 +12,37 @@ try{
 }
 catch(e){
 	console.log("Could not load configuration.\n"+e);
-}
-console.log(config);
-	
-var clipb = require('./lib/node-clipboard');
+}	
 
-function onClipboardEvent(){
-	console.log("clipboard");
+function clipboardReady(){
+	console.log("Done! Clipboard updated!");
+}
+//puts data in clipboard
+function onClipboardOut(data){
+	console.log("Fetched clipboard from remote:"+data);
+	copy(data,clipboardReady);
+}
+function onClipboardRequired(){
+	net.get(onClipboardOut);
 }
 
-var kmon = require('./monitor');
-kmon.start();
+//take data from clipboard
+function onClipboardIn(a,data){
+	console.log("Sent Clipboard to remote:"+data);
+	net.send(data);
+}
+function onClipboardEvent(data){
+	clipb.paste(onClipboardIn);
+}
+
+
+kmon.addHook({key:'v',specials:['ctrl'],callback:onClipboardRequired});
 kmon.addHook({key:'c',specials:['ctrl'],callback:onClipboardEvent});
 kmon.addHook({key:'x',specials:['ctrl'],callback:onClipboardEvent});
-kmon.addHook({key:'z',specials:['ctrl'],callback:function(){kmon.stop();}});
+kmon.addHook({key:'o',specials:['ctrl'],callback:function(){net.start();} });
+kmon.addHook({key:'p',specials:['ctrl'],callback:function(){net.stop();}});
+kmon.addHook({key:'z',specials:['ctrl'],callback:function(){kmon.stop();net.stop();process.exit();}});
+
 
 if( config.shortcuts ){
 	try{
@@ -44,3 +65,7 @@ if( config.shortcuts ){
 	catch(e){
 	}
 }
+console.log("Clipboard monitor running");
+console.log("stop network link - ctrl + p");
+console.log("start network link - ctrl + o");
+kmon.start();
