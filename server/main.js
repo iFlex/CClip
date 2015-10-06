@@ -91,7 +91,6 @@ io.on('connection', function (socket) {
     }
 
 		var user = socketToUser[socket]
-    console.log("New data from "+user);
     var packet = Packet.fromRaw(data);
     if( packet.t == "server_request"){//server request
       serverOps.handleServerRequest(socket,data);
