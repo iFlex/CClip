@@ -13,11 +13,13 @@ module.exports = function client(server,dataCallback){
     socket.emit('auth',Packet.toBase64({user:user,password:pass}));
     socket.on(user,function(data){
       processData(data);
-    })
+    });
   }
 
   this.send = function(data){
     try {
+      console.log("Sending");
+      console.log(data);
       socket.emit(user,Packet.toBase64(data));
     } catch( e ){
       console.log("Failed to send data",e);
@@ -28,8 +30,6 @@ module.exports = function client(server,dataCallback){
 
   function processData(data){
     try {
-      console.log("processing:");
-      console.log(data);
       dataCallback(Packet.fromBase64(data));
     } catch( e ){
       console.log("Could not process incoming data",e);

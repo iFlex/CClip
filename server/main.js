@@ -1,4 +1,4 @@
-const PORT=8084;
+const PORT=8086;
 
 //HTTP
 var packet = require('../common/packet');
@@ -81,7 +81,7 @@ io.on('connection', function (socket) {
 		var user = socketToUser[socket]
 		var destinations = activeUsers[user];
 		for( k in destinations)
-			//if(k != socket)
+			if(k != socket)
 				destinations[k][0].emit(user,data);
 	}
 

@@ -16,10 +16,13 @@ module.exports = new (function(){
     });
   }
 
-  function processCommand(cmd){
-    cmd = cmd.substr(0,cmd.indexOf("\n"));
+  function processCommand(command){
+    command = command.substr(0,command.indexOf("\n"));
+    command = command.split(" ");
+    cmd = command[0];
+    command = command.splice(1,command.length);
     try {
-      commands[cmd]();
+      commands[cmd].apply(this,command);
     } catch ( e ) {
       console.log("Error, can't execute command "+cmd+":",e);
     }

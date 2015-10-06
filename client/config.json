@@ -1,10 +1,12 @@
 {
 	"server":"http://localhost",
-	"port":8084,
+	"port":8086,
 	"commands":
 	{
 		"exit":"exit",
 		"push":"publishClipboard",
-		"pull":"pullClipboard"
+		"pull":"pullClipboard",
+		"pushFile":"pushFile",
+		"pullFile":"pullFile"
 	}
 }
