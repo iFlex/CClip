@@ -1,6 +1,6 @@
 {
 	"server":"http://localhost",
-	"port":8086,
+	"port":8088,
 	"commands":
 	{
 		"exit":"exit",
