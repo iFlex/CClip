@@ -1,5 +1,0 @@
-{
-	"shortcuts":{
-		"exit":['CTRL','z'];
-	}
-}

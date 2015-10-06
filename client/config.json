@@ -1,12 +1,10 @@
 {
-	"server":"ec2-54-69-88-224.us-west-2.compute.amazonaws.com",
-	"port":80,
+	"server":"http://localhost",
+	"port":8084,
 	"commands":
 	{
-		"exit":["ctrl","z"],
-		"copy":["ctrl","c"],
-		"paste":["ctrl","v"],
-		"netstart":["ctrl","o"],
-		"netstop":["ctrl","p"]
+		"exit":"exit",
+		"push":"publishClipboard",
+		"pull":"pullClipboard"
 	}
 }

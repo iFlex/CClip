@@ -1,94 +1,108 @@
-//TODO: add fast store for up to a one kilobyte per user in RAM
-function net(){
-	var net = require('net');
-	var fs = require('fs');
+const PORT=8084;
 
-	this.status = "uninitialised";
-	var requests = ["0","1","2"];//0 store, 1 get, 2 authenticate
-	var ready = false;
-	var ctx = this;
-	var clientTimeout = 2000;
-
-	var port = 2022;
-	var server = "127.0.0.1";
-	var clients = {};
-	
-	function decreaseClients(soc){
-		if(clients[soc.owner])
-		{
-			clients[soc.owner]--;
-			if(!clients[soc.owner])
-				delete clients[soc.owner];
-		}
-	}
-	function auth(c,data){
-		data = data.toString();
-		if( data[0] == requests[2] )
-		{
-			//if auth success
-			clearTimeout(c.expires);
-			data = data.substr(1,data.length);
-			data = data.split("/");
-			
-			if(!clients[data[0]])
-				clients[data[0]] = 0;
-			clients[data[0]]++;
-
-			c.owner = data[0];
-			c.busy = false;
-			c.removeAllListeners(['data']);
-			c.on('data',function(data){onRequest(c,data)});
-			console.log(c.owner+" - has logged in");
-		}
-	}
-	
-	function onRequest(soc,data){
-		var cmd = data[0];
-		if(cmd == requests[0].charCodeAt(0) && !soc.busy)//store - if writer is busy copying data from pervious request, this one is discarded :(
-		{
-			console.log("("+soc.owner+"):store");
-			soc.busy = true;
-			fs.writeFile("./"+soc.owner, data.slice(1,data.length), function(err) { if(err) console.log("("+soc.owner+"):FILE_WRITE_ERROR:"+err); soc.busy = false;});
-		}
-		if(cmd == requests[1].charCodeAt(0) )//retrieve
-		{
-			console.log("("+soc.owner+"):fetch");
-			fs.readFile("./"+soc.owner,'utf8', function(err, d) {
-				if(err) {console.log("("+soc.owner+"):FILE_READ_ERROR:"+err); d="";};
-				soc.write(d);
-			});
-		}
-	}
-
-	function onClientConnect(c,i){
-		console.log("New user has connected. Awaiting auth...");
-		c.expires = setTimeout(function(){c.destroy();},clientTimeout);
-		c.on('data',function(data){
-			auth(c,data);
+//HTTP
+var packet = require('../common/packet');
+var http = require('http');
+var mime = require('mime');
+var server = http.createServer(handleRequest);
+var io = require('../node_modules/socket.io')(server);
+var utils = new (function(){
+  this.makeAuthToken = function(length){
+    token = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    for( var i=0;i<length;++i)
+        token += possible.charAt(Math.floor(Math.random() * possible.length));
+    return token;
+  }
+})();
+//Database support
+var mysql      = 0;
+var connection = 0;
+function connectToDB(){
+	try {
+		mysql = require('mysql');
+		connection = mysql.createConnection({
+			host     : 'localhost',
+			user     : 'root',
+			password : '',
+			database : 'webshow'
 		});
-		c.on('error',function(){ decreaseClients(c); c.destory();});
-		c.on('end',function(){ decreaseClients(c); console.log(c.owner+" - ended connection"); c.destroy(); });
+		connection.connect();
+	} catch ( e ){
+		console.log("ERROR: could not connect to the database. Users can not be authenticated! Abort!",e);
 	}
-	this.start = function(){
-		ctx.status = "starting";
-		server = net.createServer({ allowHalfOpen: false},onClientConnect);
-		server.listen(port, function(){ ready = true; ctx.status = "listening"});
-		console.log("Stargint clipboard server on port:"+port);
-	}
+}
+//connectToDB();
+console.log(utils.makeAuthToken(64));
+//////////////////
+function handleRequest(request, response){
+    try {
+			//do nothing
+    } catch(err) {
+        console.log(err.stack);
+    }
+}
+//////////////////
+var activeUsers = {};
+var socketToUser = {};
+function authenticate(user,pass,success,failure){
+	success(utils.makeAuthToken(64));
+}
 
-	this.stop = function(){
-		if(ready)
-			server.close();
-		else
-			console.log("Net: Server already closed!");
-	}
+function activateUser(user,socket,token,handlerFunction) {
+	if(!activeUsers[user])
+		activeUsers[user] = {};
 
-	this.changePort = function(newPort){
-		this.stop();
-		port = newPort;
-		this.start();
+	socket.on(user,handlerFunction);
+	activeUsers[user][socket] = [socket,token];
+	socketToUser[socket] = user;
+}
+
+function deactivateUser(user,socket){
+	if(activeUsers[user] && activeUsers[user][socket]){
+		socket.disconnect();
+		delete activeUsers[user][socket];
+		delete socketToUser[socket];
 	}
 }
 
-var s = new net();
-s.start();
+io.on('connection', function (socket) {
+	console.log("New connection");
+	var Packet = new packet();
+	var timeout = 0;
+	timeout = setTimeout(function(){
+		console.log("Auth timeout");
+		socket.disconnect();
+	},500);
+
+	function serveUser(data){
+		console.log("New data from user");
+		console.log(data);
+		var user = socketToUser[socket]
+		var destinations = activeUsers[user];
+		for( k in destinations)
+			//if(k != socket)
+				destinations[k][0].emit(user,data);
+	}
+
+  socket.on('auth', function (data) {
+		console.log("New auth request");
+		console.log(data);
+		data = Packet.fromBase64(data);
+		if( data.user && data.password )
+			authenticate(data.user,data.password,function(token){
+					console.log("Auth success");
+					clearTimeout(timeout);
+					activateUser(data.user,socket,token,serveUser);
+			},function(){
+				console.log("Auth failure for:"+data.user);
+				clearTimeout(timeout);
+				socket.disconnect();
+			});
+	});
+});
+
+//listen
+server.listen(PORT, function(){
+    console.log("Server listening on port:%s", PORT);
+});
