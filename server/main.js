@@ -1,11 +1,12 @@
-const PORT=8088;
-
+const PORT=8094;
+const MAX_PACKET_SIZE = 2048;
 //HTTP
 var packet = require('../common/packet');
 var http = require('http');
 var mime = require('mime');
 var server = http.createServer(handleRequest);
 var io = require('../node_modules/socket.io')(server);
+var serverOps = require("./serverOps");
 var utils = new (function(){
   this.makeAuthToken = function(length){
     token = "";
@@ -45,6 +46,8 @@ function handleRequest(request, response){
 //////////////////
 var activeUsers = {};
 var socketToUser = {};
+//TODO: deactivate bridge after stream is complete
+var userBridge = {};//dictates who can forward to who
 function authenticate(user,pass,success,failure){
 	success(utils.makeAuthToken(64));
 }
@@ -60,10 +63,16 @@ function activateUser(user,socket,token,handlerFunction) {
 
 function deactivateUser(user,socket){
 	if(activeUsers[user] && activeUsers[user][socket]){
-		socket.disconnect();
-		delete activeUsers[user][socket];
-		delete socketToUser[socket];
-	}
+    try {
+      socket.disconnect();
+		  delete activeUsers[user][socket];
+		  delete socketToUser[socket];
+      return;
+    } catch(e){
+      console.log("#ROGUE USER");
+    }
+  }
+  socket.disconnect();
 }
 
 io.on('connection', function (socket) {
@@ -72,23 +81,49 @@ io.on('connection', function (socket) {
 	var timeout = 0;
 	timeout = setTimeout(function(){
 		console.log("Auth timeout");
-		socket.disconnect();
+    socket.disconnect();
 	},500);
 
 	function serveUser(data){
-		console.log("New data from user");
-		console.log(data);
+    if(data.length > MAX_PACKET_SIZE){
+      deactivateUser(socketToUser[socket],socket);
+      return;
+    }
+
 		var user = socketToUser[socket]
-		var destinations = activeUsers[user];
-		for( k in destinations)
-			if( destinations[k][0] != socket)
-				destinations[k][0].emit(user,data);
-	}
+    console.log("New data from "+user);
+    var packet = Packet.fromRaw(data);
+    if( packet.t == "server_request"){//server request
+      serverOps.handleServerRequest(socket,data);
+    } else {
+      if(!packet.r) {//broadcast to user's devices
+        var destinations = activeUsers[user];
+        for( k in destinations)
+			     if( destinations[k][0] !== socket)
+				       destinations[k][0].emit(user,data);
+      } else { //routed packet
+        packet.s = user;//add sender identity
+        data = Packet.toRaw(packet);//repackage data
+        for( recipient in packet.r ) {// for each user in the recipient list
+          if(userBridge[user][recipient]) {//if sender is allowed to talk to recipient
+            var destinations = activeUsers[recipient];//forward
+            for( k in destinations )
+  			       destinations[k][0].emit(recipient,data);
+          }
+        }
+      }
+    }
+  }
 
   socket.on('auth', function (data) {
+    if(data.length > MAX_PACKET_SIZE){
+      deactivateUser(socketToUser[socket],socket);
+      return;
+    }
+
 		console.log("New auth request");
 		console.log(data);
-		data = Packet.fromBase64(data);
+		data = Packet.fromRaw(data);
 		if( data.user && data.password )
 			authenticate(data.user,data.password,function(token){
 					console.log("Auth success");
@@ -106,3 +141,4 @@ io.on('connection', function (socket) {
 server.listen(PORT, function(){
     console.log("Server listening on port:%s", PORT);
 });
+serverOps = new serverOps({activeUsers:activeUsers,socketToUser:socketToUser,userBridge:userBridge,sql:connection});

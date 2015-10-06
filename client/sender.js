@@ -1,4 +1,12 @@
-//t = type, d = data, i = current index, l = last index, s = sender, sid = stream id
+/*
+t = type,
+d = data,
+i = current index,
+l = last index,
+s = sender,
+r = receiver,
+sid = stream id
+*/
 //type - clipboard,strea,continuous_stream
 module.exports = function(client){
   var fs = require("fs");
@@ -7,6 +15,14 @@ module.exports = function(client){
   var streamID = 0;
   var readLength = 1024;
   var active = true;
+
+  this.sendRawData = function(data){
+    var data = {
+      t:"clipboard",
+      d:data
+    }
+    client.send(data);
+  }
 
   this.sendFile = function(path){
     var streamInfo = {lastSent:0,lastAck:0,index:0,file:0};
@@ -58,12 +74,12 @@ module.exports = function(client){
             sid:id,
             i:Math.ceil(stream.index/readLength),
             l:stream.totalSegments,
-            d:stream.buffer.slice(0,bytes).toString()
+            d:stream.buffer.slice(0,bytes).toString('base64')
           }
           if(data.i == 0)
             data.filename = "_"+stream.filename;
-          client.send(data);
 
+          client.send(data);
           stream.index += bytes;
           if( bytes > 0 ){
             continueStream(id);

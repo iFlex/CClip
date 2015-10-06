@@ -4,10 +4,13 @@ module.exports = new (function(){
   var lastClipboard = 0;
   var streams = {};
   var fs = require("fs");
+  var active = true;
+
+  this.getLastClipboard = function(){
+    return lastClipboard;
+  }
 
   this.onNewPacket = function(data){
-    console.log("Processing");
-    console.log(data);
     if(data.t === "clipboard"){
       lastClipboard = data.d;
     } else if( data.t === "stream"){
@@ -20,37 +23,46 @@ module.exports = new (function(){
     var usr = data.s || 0;
     streams[usr] = streams[usr] || {};
     var streamInfo = { lastIndex:-1, file:0, buffer:{}, buffered:0, maxBuffer:10 };
-    streamInfo.file = fs.openSync(data.filename,"w");
+    streamInfo.file = fs.createWriteStream(data.filename);//fs.openSync(data.filename,"w");
+    streamInfo.ready = false;
+    streamInfo.file.on("open",function(){
+      streamInfo.ready = true;
+      midStream(data);
+    })
     streams[usr][data.sid] = streamInfo;
-
-    midStream(data);
   }
 
+  function commitBuffer(streamInfo){
+    console.log("BUFFER COMMIT");
+    console.log(Object.keys(streamInfo.buffer));
+    while(streamInfo.buffer[streamInfo.lastIndex+1]){
+      streamInfo.file.write(new Buffer(streamInfo.buffer[streamInfo.lastIndex+1].d, 'base64'));
+      streamInfo.lastIndex++;
+      delete streamInfo.buffer[streamInfo.lastIndex];
+      streamInfo.buffered--;
+      console.log("Commiting segment "+streamInfo.lastIndex);
+    }
+  }
   function midStream(data){
+    if(!active)
+      return;
+
     var usr = data.s || 0;
     var streamInfo = streams[usr][data.sid];
-    if( data.i > streamInfo.lastIndex + 1 ) {//ahead of time packet, buffer it
+    if( data.i > streamInfo.lastIndex + 1 || !streamInfo.ready ) {//ahead of time packet, buffer it
       if(streamInfo.buffered < streamInfo.maxBuffer) {
         streamInfo.buffer[ data.i ] = data;
         streamInfo.buffered++;
+        console.log("Fragment sent to buffer:"+data.i);
       } else {
         //todo: ask for resend
+        console.log("FATAL STREAM ERROR, COULD NOT ORDER PACKETS");
       }
     } else {
-      var buffer = new Buffer(data.d,"binary");
-      fs.write(streamInfo.file,buffer,0,buffer.length);
+      console.log("WRITTING SEGMENT "+data.i+"/"+data.l);
+      streamInfo.file.write(new Buffer(data.d, 'base64'));
       streamInfo.lastIndex = data.i;
-      var rawData = 0;
-      //write out the buffered bits if necessary
-      while(streamInfo.buffer[data.i+1]){
-        rawData = streamInfo.buffer[data.i+1].d;
-
-        fs.write(streamInfo.file,rawData,0,length(rawData));
-
-        streamInfo.lastIndex = data.i+1;
-        delete streamInfo.buffer[data.i];
-        streamInfo.buffered--;
-      }
+      commitBuffer(streamInfo);
     }
   }
 
@@ -58,11 +70,14 @@ module.exports = new (function(){
     midStream(data);
     var usr = data.s || 0;
     var streamInfo = streams[usr][data.sid];
-    fs.close(streamInfo.file);
+    streamInfo.file.close();
     delete streams[usr][data.sid];
   }
 
   function handleStream(data){
+    if(!active)
+      return;
+
     if(data.i == 0)
       initiateStream(data);
     else if( data.i < data.l )

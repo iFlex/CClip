@@ -11,7 +11,7 @@ var executor = new (function(){
 	this.publishClipboard = function(){
 		function onClipboardIn(a,data){
 			console.log("Sent Clipboard to remote.");
-			Client.send({d:data});
+			sender.sendRawData(data);
 		}
 		clipb.paste(onClipboardIn);
 	}
@@ -21,8 +21,7 @@ var executor = new (function(){
 		function clipboardReady(){
 			console.log("Clipboard updated!");
 		}
-		if(lastClipboard)
-			clipb.copy(receiver.getLastClipboard(),clipboardReady);
+		clipb.copy(receiver.getLastClipboard(),clipboardReady);
 	}
 
 	this.pushFile = function(name){
