@@ -33,14 +33,11 @@ module.exports = new (function(){
   }
 
   function commitBuffer(streamInfo){
-    console.log("BUFFER COMMIT");
-    console.log(Object.keys(streamInfo.buffer));
     while(streamInfo.buffer[streamInfo.lastIndex+1]){
       streamInfo.file.write(new Buffer(streamInfo.buffer[streamInfo.lastIndex+1].d, 'base64'));
       streamInfo.lastIndex++;
       delete streamInfo.buffer[streamInfo.lastIndex];
       streamInfo.buffered--;
-      console.log("Commiting segment "+streamInfo.lastIndex);
     }
   }
   function midStream(data){
@@ -53,13 +50,11 @@ module.exports = new (function(){
       if(streamInfo.buffered < streamInfo.maxBuffer) {
         streamInfo.buffer[ data.i ] = data;
         streamInfo.buffered++;
-        console.log("Fragment sent to buffer:"+data.i);
       } else {
         //todo: ask for resend
         console.log("FATAL STREAM ERROR, COULD NOT ORDER PACKETS");
       }
     } else {
-      console.log("WRITTING SEGMENT "+data.i+"/"+data.l);
       streamInfo.file.write(new Buffer(data.d, 'base64'));
       streamInfo.lastIndex = data.i;
       commitBuffer(streamInfo);
