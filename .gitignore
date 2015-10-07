@@ -8,6 +8,12 @@ Desktop.ini
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 
+*~
+*.pyc
+*.jpeg
+*.jpg
+*.png
+
 # Windows Installer files
 *.cab
 *.msi
@@ -38,6 +44,4 @@ $RECYCLE.BIN/
 # Directories potentially created on remote AFP share
 .AppleDB
 .AppleDesktop
-Network Trash Folder
-Temporary Items
 .apdisk

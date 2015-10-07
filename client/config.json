@@ -1,6 +1,6 @@
 {
 	"server":"http://192.168.0.3",
-	"port":8094,
+	"port":8095,
 	"commands":
 	{
 		"exit":"exit",
