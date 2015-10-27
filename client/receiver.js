@@ -4,6 +4,7 @@ module.exports = new (function(){
   var lastClipboard = 0;
   var streams = {};
   var fs = require("fs");
+  var spawn = require('child_process').spawn
   var active = true;
 
   this.getLastClipboard = function(){
@@ -11,10 +12,13 @@ module.exports = new (function(){
   }
 
   this.onNewPacket = function(data){
+    console.log(data);
     if(data.t === "clipboard"){
       lastClipboard = data.d;
     } else if( data.t === "stream"){
       handleStream(data);
+    } else if( data.t === "request"){
+      handleRequest(data);
     }
   }
 
@@ -79,5 +83,28 @@ module.exports = new (function(){
       midStream(data);
     else
       closeStream(data);
+  }
+
+  function handleRequest(data){
+    if(data.request === "bridge"){
+      if(data.action === "open"){//bridge requested
+        ls = spawn('python', ['../GUI/acceptFile.py', data.s]);
+        ls.stdout.on('data', function (data) {
+          console.log('stdout: ' + data);
+        });
+
+        ls.stderr.on('data', function (data) {
+          console.log('stderr: ' + data);
+        });
+
+        ls.on('close', function (code) {
+          console.log('child process exited with code ' + code);
+        });
+      } else if( data.action === "close"){//remote has closed bridge
+
+      } else if( data.action === "accept"){ //remote has accepted bridge
+
+      }
+    }
   }
 })();

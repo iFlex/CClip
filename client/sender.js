@@ -16,6 +16,11 @@ module.exports = function(client){
   var readLength = 1024;
   var active = true;
 
+  this.send = function(data){
+    console.log(data);
+    client.send(data);
+  }
+
   this.sendRawData = function(data){
     var data = {
       t:"clipboard",

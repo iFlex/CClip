@@ -1,7 +1,14 @@
 import views
-from subprocess import Popen, PIPE, STDOUT
+import json
 import Tkinter
+import subprocess
 
+def syncClipbd():
+    filen = views.askFileName();
+
+def sendClipbd():
+    filen = views.askFileName();
+    recipient = views.askInput("Username of recipient:");
 
 def syncFile():
     filen = views.askFileName();
@@ -10,18 +17,22 @@ def sendFile():
     filen = views.askFileName();
     recipient = views.askInput("Username of recipient:");
 
-#p = Popen(['node','../client/main.js'], stdout=PIPE, stdin=PIPE, stderr=PIPE)
-#while True:
-#    cmd = raw_input("command:");
-#    print p.communicate(input=cmd)[0];
 
 identity = views.login();
-#TODO: login
+
+p = subprocess.Popen(['node','../client/main.js',identity[0],identity[1]],stdout=subprocess.PIPE,stdin=subprocess.PIPE)
+print p.communicate()[0]
 
 window = Tkinter.Tk()
 window.title(identity[0])
 
 b = Tkinter.Button(text=identity[0]+" - logout");
+b.pack(fill=Tkinter.X)
+
+b = Tkinter.Button(text="Sync Clipboard",command=syncClipbd);
+b.pack(fill=Tkinter.X)
+
+b = Tkinter.Button(text="Send Clipboard",command=sendClipbd);
 b.pack(fill=Tkinter.X)
 
 b = Tkinter.Button(text="Sync File",command=syncFile);

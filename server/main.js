@@ -1,12 +1,16 @@
-const PORT=8095;
+const PORT=8109;
 const MAX_PACKET_SIZE = 2048;
 //HTTP
 var packet = require('../common/packet');
+var Packet = new packet();
 var http = require('http');
 var mime = require('mime');
 var server = http.createServer(handleRequest);
 var io = require('../node_modules/socket.io')(server);
 var serverOps = require("./serverOps");
+var sender = require("./sender");
+var receiver = require("./receiver");
+
 var utils = new (function(){
   this.makeAuthToken = function(length){
     token = "";
@@ -46,7 +50,6 @@ function handleRequest(request, response){
 //////////////////
 var activeUsers = {};
 var socketToUser = {};
-//TODO: deactivate bridge after stream is complete
 var userBridge = {};//dictates who can forward to who
 function authenticate(user,pass,success,failure){
 	success(utils.makeAuthToken(64));
@@ -77,7 +80,6 @@ function deactivateUser(user,socket){
 
 io.on('connection', function (socket) {
 	console.log("New connection");
-	var Packet = new packet();
 	var timeout = 0;
 	timeout = setTimeout(function(){
 		console.log("Auth timeout");
@@ -92,24 +94,16 @@ io.on('connection', function (socket) {
 
 		var user = socketToUser[socket]
     var packet = Packet.fromRaw(data);
-    if( packet.t == "server_request"){//server request
-      serverOps.handleServerRequest(socket,data);
+    if( packet.t === "server_request"){//server request
+      console.log("handling server request");
+      console.log(packet);
+      serverOps.handleServerRequest(socket,packet);
     } else {
       if(!packet.r) {//broadcast to user's devices
-        var destinations = activeUsers[user];
-        for( k in destinations)
-			     if( destinations[k][0] !== socket)
-				       destinations[k][0].emit(user,data);
+        sender.sync(data,user,socket);
       } else { //routed packet
         packet.s = user;//add sender identity
-        data = Packet.toRaw(packet);//repackage data
-        for( recipient in packet.r ) {// for each user in the recipient list
-          if(userBridge[user][recipient]) {//if sender is allowed to talk to recipient
-            var destinations = activeUsers[recipient];//forward
-            for( k in destinations )
-  			       destinations[k][0].emit(recipient,data);
-          }
-        }
+        sender.route(packet,user);
       }
     }
   }
@@ -140,4 +134,11 @@ io.on('connection', function (socket) {
 server.listen(PORT, function(){
     console.log("Server listening on port:%s", PORT);
 });
-serverOps = new serverOps({activeUsers:activeUsers,socketToUser:socketToUser,userBridge:userBridge,sql:connection});
+
+var shared = {activeUsers:activeUsers,socketToUser:socketToUser,userBridge:userBridge,sql:connection,Packet:Packet};
+sender = new sender(shared);
+receiver = new receiver(shared);
+
+shared.sender = sender;
+shared.receiver = receiver;
+serverOps = new serverOps(shared);

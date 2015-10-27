@@ -1,12 +1,13 @@
 {
-	"server":"http://192.168.0.3",
-	"port":8095,
+	"server":"http://localhost",
+	"port":8104,
 	"commands":
 	{
 		"exit":"exit",
 		"push":"publishClipboard",
 		"pull":"pullClipboard",
 		"pushFile":"pushFile",
-		"pullFile":"pullFile"
+		"pullFile":"pullFile",
+		"bridge":"requestBridge"
 	}
 }

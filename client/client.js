@@ -20,6 +20,7 @@ module.exports = function client(server,dataCallback){
     try {
       //console.log("Sending");
       //console.log(data);
+      data.s = user;
       socket.emit(user,Packet.toRaw(data));
     } catch( e ){
       console.log("Failed to send data",e);

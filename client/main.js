@@ -28,18 +28,30 @@ var executor = new (function(){
 		sender.sendFile(name);
 	}
 
+	this.requestBridge = function(target){
+		var data = {t:"server_request",request:"bridge",action:"open",r:target}
+		sender.send(data);
+	}
+
 	this.exit = function(){
 		process.exit();
 	}
 })();
 
+if(process.argv.length < 4){
+	console.log("Please provide username and password as arguments");
+	process.exit();
+}
+
 var config = {};
 try {
 	var bfr = fs.readFileSync('config.json');
 	config = JSON.parse(bfr.toString('utf8',0,bfr.length));
-
+	if(process.argv.length == 5)
+		config.port = process.argv[4];
+		
 	var Client = new client(config.server+":"+config.port,receiver.onNewPacket);
-	Client.auth("lili","lala");
+	Client.auth(process.argv[2],process.argv[3]);
 	sender = new sender(Client);
 
 	for( cmd in config.commands )
