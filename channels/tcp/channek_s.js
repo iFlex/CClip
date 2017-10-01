@@ -16,7 +16,6 @@ const net     = require("net");
 const SND_HOST = process.argv[1];
 const SND_PORT = process.argv[2];
 const CHUNK_SIZE = 1400;
-const socket;
 var fd;
 
 const server = net.createServer((c) => {
