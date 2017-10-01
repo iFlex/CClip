@@ -17,10 +17,11 @@ const SND_HOST = process.argv[1];
 const SND_PORT = process.argv[2];
 const CHUNK_SIZE = 1400;
 var fd;
-
+index = 0;
 const server = net.createServer((c) => {
     console.log('client connected');
-    fd = fs.createWriteStream("out.tst", {flags: 'w',
+    index++;
+    fd = fs.createWriteStream(index+"out.tst", {flags: 'w',
         encoding: 'binary',
         fd: null,
         mode: 0o666,
