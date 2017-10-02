@@ -13,9 +13,26 @@ const fs      = require("fs");
 const net     = require("net");
 
 //load  - parameters
-const SND_HOST = process.argv[1];
-const SND_PORT = process.argv[2];
+const MGT_PORT = process.argv[2];
+const SND_HOST = process.argv[3];
+const SND_PORT = process.argv[4];
 const CHUNK_SIZE = 1400;
+console.log("Connecting to mgmt port:"+MGT_PORT);
+var mgtsocket = null;
+try{
+    mgtsocket = net.createConnection(MGT_PORT,function(err){
+        mgtsocket.on("data",function(data){
+            console.log("MANAGEMENT DATA:"+data);
+        });
+        mgtsocket.on("error",function(err){
+            console.log("E:"+err);
+        });
+    });
+} catch(e){
+    console.log("CONNECTION TO MANAGER FAILED:"+e);
+    console.error(e);
+}
+/*
 var fd;
 index = 0;
 const server = net.createServer((c) => {
@@ -36,3 +53,4 @@ server.on('error', (err) => {
 server.listen(8124, () => {
     console.log('server bound');
 });
+*/
