@@ -1,0 +1,5 @@
+{
+    "TYPE(1)"  :0, //0 - COMMAND / 1 - File Transfer / 2 - Streaming
+    "LENGTH(2)":0, //length of details field
+    "EXTRA(16)":""
+}

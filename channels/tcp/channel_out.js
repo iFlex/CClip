@@ -14,12 +14,29 @@ const net     = require("net");
 
 console.log(process.argv);
 //load  - parameters
-const RCV_HOST = process.argv[2];
-const RCV_PORT = process.argv[3];
-const FILENAME = process.argv[4];
+const RCV_HOST = process.argv[3];
+const RCV_PORT = process.argv[4];
+const FILENAME = process.argv[5];
 const CHUNK_SIZE = 1400;
 var socket;
 var fd;
+
+const MGT_PORT = process.argv[2];
+console.log("Connecting to mgmt port:"+MGT_PORT);
+var mgtsocket = null;
+try{
+    mgtsocket = net.createConnection(MGT_PORT,function(err){
+        mgtsocket.on("data",function(data){
+            console.log("MANAGEMENT DATA:"+data);
+        });
+        mgtsocket.on("error",function(err){
+            console.log("E:"+err);
+        });
+    });
+} catch(e){
+    console.log("CONNECTION TO MANAGER FAILED:"+e);
+    console.error(e);
+}
 
 //stats - 
 var READ = 0;
@@ -58,60 +75,7 @@ function initiate(){
         });
         SND_START = new Date().getTime();
         fd.pipe(socket);
-        //sendEntireFile();
     });
 }
-/*
-function sendChunk(err,bytesRead,buffer){
-    if(bytesRead == 0)
-        return;
-    
-    READ++;
-    SEND_ATTEMPT++;
-    var queued = false; 
 
-    function onComplete(){
-        SENT++;
-        if(SENT == READ && TOTAL_FILE_SIZE <= READ*CHUNK_SIZE){
-            socket.end();
-            SND_END = new Date().getTime();
-            var delta = SND_END - SND_START;
-            var Bps = (READ*CHUNK_SIZE*1.0)/(delta/1000);
-            process.exit(0);
-        }
-    }
-
-    if(bytesRead < buffer.length){
-        var buffer2 = new Buffer(bytesRead);
-        buffer.copy(buffer2,0,0,bytesRead);
-        queued = socket.write(buffer2,"binary",onComplete);
-    } else {
-        queued = socket.write(buffer,"binary",onComplete);
-    }
-    
-    if(!queued){
-        //need to slow down sending rate
-    } else {
-        //can speed up sending rate again
-    }
-}
-
-function readFromFile(fpos) {
-    var buffer = new Buffer(CHUNK_SIZE);
-    fs.read(fd,buffer,0,CHUNK_SIZE,fpos,sendChunkSND_START = new Date().getTime(););
-    READ_ATTEMPT++;
-}
-
-function sendEntireFile() {
-    var index = 0;
-    SND_START = new Date().getTime();
-    while(index < TOTAL_FILE_SIZE){
-        //if(){
-        readFromFile(index);
-        index += CHUNK_SIZE;
-        //}
-    }
-    console.log(READ_ATTEMPT+"!"+READ+"!"+SEND_ATTEMPT+"!"+SENT);
-}
-*/
 initiate();
