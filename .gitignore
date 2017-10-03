@@ -46,3 +46,4 @@ $RECYCLE.BIN/
 .AppleDesktop
 .apdisk
 node_modules
+**/*node_modules
