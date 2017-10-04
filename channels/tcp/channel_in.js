@@ -7,11 +7,12 @@
 2. Start reading chunks of the file and send
 3. Report success
 */
+
 const process = require("process");
 const fs      = require("fs");
 const net     = require("net");
 const Packet  = require("./packet");
-
+const PacketReader = require("./packet_reader");
 //load  - parameters
 const MGT_PORT = process.argv[2];
 const PORT = 8012;
@@ -36,8 +37,12 @@ var sockets = {}
 var unauthSoc = [];
 
 function clearCallbacks(sock){
-    sock.on('data',function(data){});
+    sock.on('data',null);
     sock.on('drain',null);
+    sock.on('close',null);
+    sock.on('error',null);
+    sock.on('timeout',null);
+    sock.on('end',null)
 }
 
 function processFileTransferCommand(sock,packet){
@@ -56,17 +61,13 @@ function processFileTransferCommand(sock,packet){
     }
 }
 
-function processControlPackets(sock,packets){
-    for(var i=0; i<packets.length;++i){
-        if(packets[i].getType() == 0){
-            //ToDo - process command
-        } else if(packets[i].getType() == 1){
-            processFileTransferCommand(sock,packets[i]);
-            //ToDo - deal with the rest of the packets
-            return;
-        } else if(packets[i].getType() == 2){
-            //ToDo - streaming for the future
-        }
+function processControlPackets(sock,packet){
+    if(packet.getType() == 0){
+        //
+    } else if(packet.getType() == 1){
+        processFileTransferCommand(sock,packet);
+    } else if(packet.getType() == 2){
+        //
     }
 }
 
@@ -74,31 +75,19 @@ function linkFileTransferCallbacks(sock,writer){
     sock.pipe(writer);
 }
 
-function linkControlCallbacks(sock){
-    var buffer = null;
-    var packet = new Packet();
-    var packets = [];
-    
-    function checkPacketReadyness(){
-        if(packet.isComplete()){
-            packets.push(packet);
-            packet = new Packet();
-        }
-    }
-    sock.on('data',function(data){
-        while(buffer = packet.digest(buffer)){
-            checkPacketReadyness();       
-        }
-        buffer = packet.digest(data);
-        checkPacketReadyness();
-        processControlPackets(sock,packets);
-    });
-}
-
 function isConnectionExpected(sock){
     return true;
 }
 
+function onConnErr(sock){
+
+}
+
+function onConnEnd(sock){
+    
+}
+
+const packetReader = new PacketReader(Packet,processControlPackets,onConnEnd,onConnErr);
 const server = net.createServer((c) => {
     if(!isConnectionExpected(c)) {
         c.end();
@@ -108,17 +97,9 @@ const server = net.createServer((c) => {
     unauthSoc.push({socket:c})
     console.log('client connected');
     
-    //linkAuthCallbacks();
-    linkControlCallbacks(c);
-    c.on('close',function(){
-        c.end(); 
-    });
-    c.on('error',function(){
-        c.end(); 
-    });
-    c.on('timeout',function(){
-        c.end(); 
-    });
+    //autHandler.takeOver();
+    packetReader.takeOver(c);
+    //
 });
 
 server.on('error', (err) => {

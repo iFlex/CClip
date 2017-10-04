@@ -16,6 +16,22 @@ module.exports = new function(){
     var PORT = 8080;
     var CHANNEL_CONNECT_WAIT = 60000;
     var server = null;
+    
+    function instantiate(rootPath,params,args){
+        for(var i = 1; i < params.length; ++i){
+            params[i] = params[i].replace("/%/",rootPath);
+        }
+
+        for(var i = 0; i < args.length; ++i ){
+            params.push(args[i]);
+        }
+
+        console.log(params);
+        return childProcess.spawn(params[0],params.splice(1),{
+            detached:true
+            ,shell:false
+        });
+    }
 
     function channelConnectTimedOut(){
         console.log("Channel failed to connect to manager. Aborting...");
@@ -38,16 +54,8 @@ module.exports = new function(){
             console.log("STARTING IN:Channel "+inChannelToBind);
 
             var inChann = channels[inChannelToBind].in;
+            inChann.process = instantiate(channels[inChannelToBind].rootdir,inChann.instantiation,[PORT])
             
-            var startArgs = inChann.instantiation.splice(1);
-            startArgs[0] = channels[inChannelToBind].rootdir+startArgs[0];
-            startArgs.push(PORT);
-            console.log(startArgs);
-            inChann.process = childProcess.spawn(inChann.instantiation[0],startArgs,{
-                detached:true
-                ,shell:false
-            });
-
             if(inChann.process == null){
                 console.error("FAILED TO INSTANTIATE CHANNEL:"+inChannelToBind);
             } else {
@@ -78,6 +86,24 @@ module.exports = new function(){
             
             bindNextChannel();
         }
+    }
+
+    this.sendFile = function(channelName,connDetails){
+        var chandef = channels[channelName];
+        if(!chandef){
+            console.log("Inexistent channel:"+channelName);
+            return;
+        }
+        var pid = instantiate(chandef.rootdir,chandef.out.instantiation,connDetails);
+        if(!pid){
+            return false;   
+        }
+        if(!chandef.out.active){
+            chandef.out.active = [];
+        }
+        chandef.out.active.push(pid);
+
+        return true;
     }
 
     this.configure = function(opts){

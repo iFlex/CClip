@@ -6,15 +6,15 @@
         "MAX_INTANCES":50,
         "MAX_PROCESS":10,
         "CAN_STREAM":true,
-        "identification":["host","port","uid"],
-        "instantiation":["nodejs","channel_in.js"]
+        "identification":["host","port"],
+        "instantiation":["node","/%/channel_in.js"]
     },
     "out":{
         "MULTI_INSTANCE":false,
         "MULTI_PROCESS":true,
         "MAX_PROCESS":50,
         "CAN_STREAM":true,
-        "identification":["host","port","uid"],
-        "instantiation":["nodejs","channel_out.js"]
+        "identification":["host","port"],
+        "instantiation":["node","/%/channel_out.js"]
     }
 }

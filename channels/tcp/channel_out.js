@@ -11,20 +11,12 @@
 const process = require("process");
 const fs      = require("fs");
 const net     = require("net");
-
-console.log(process.argv);
-//load  - parameters
-const RCV_HOST = process.argv[3];
-const RCV_PORT = process.argv[4];
-const FILENAME = process.argv[5];
-const CHUNK_SIZE = 1400;
-var socket;
-var fd;
+const PacketReader = require("./packet_reader");
 
 const MGT_PORT = process.argv[2];
 console.log("Connecting to mgmt port:"+MGT_PORT);
 var mgtsocket = null;
-try{
+try {
     mgtsocket = net.createConnection(MGT_PORT,function(err){
         mgtsocket.on("data",function(data){
             console.log("MANAGEMENT DATA:"+data);
@@ -33,29 +25,30 @@ try{
             console.log("E:"+err);
         });
     });
-} catch(e){
+} catch(e) {
     console.log("CONNECTION TO MANAGER FAILED:"+e);
     console.error(e);
 }
 
-//stats - 
-var READ = 0;
-var SENT = 0;
-var READ_ATTEMPT = 0;
-var SEND_ATTEMPT = 0;
-var RAM_QUEUE_SIZE = 1024*1024*800;
-var TOTAL_FILE_SIZE = 0;
-var SND_START = 0;
-var SND_END   = 0;
+function filesend(RCV_PORT,RCV_HOST,FILENAME){
+    const CHUNK_SIZE = 1400;
+    var socket;
+    var fd;
+    
+    var READ = 0;
+    var SENT = 0;
+    var READ_ATTEMPT = 0;
+    var SEND_ATTEMPT = 0;
+    var RAM_QUEUE_SIZE = 1024*1024*800;
+    var TOTAL_FILE_SIZE = 0;
+    var SND_START = 0;
+    var SND_END   = 0;
 
-
-function initiate(){
     fd = fs.openSync(FILENAME,"r");
     var stats = fs.fstatSync(fd);
     TOTAL_FILE_SIZE = stats.size;
     fs.closeSync(fd);
     
-
     socket = net.createConnection(RCV_PORT,RCV_HOST,function(err){
         fd = fs.createReadStream(FILENAME,{
             flags: 'r',
@@ -78,4 +71,33 @@ function initiate(){
     });
 }
 
-initiate();
+function processControlPackets(sock,packet){
+    if(packet.getType() == 0){
+        //
+    } else if(packet.getType() == 1){
+        var jsdesc;
+        try {
+            jsdesc = JSON.parse(packet.getDetails());
+        } catch(e){
+            return;
+        }
+        filesend(jsdesc.port,jsdesc.host,jsdes.file);
+    } else if(packet.getType() == 2){
+        //
+    }
+}
+
+function onConnEnd(){
+
+}
+
+function onConnErr(){
+
+}
+
+const Packet  = require("./packet");
+const packetReader = new PacketReader(Packet,processControlPackets,onConnEnd,onConnErr);
+//send on spawn
+if(process.argv.length > 3){
+    filesend(process.argv[2],process.argv[3],process.argv[4]);
+}
