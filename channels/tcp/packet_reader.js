@@ -1,45 +1,40 @@
 module.exports = function(Packet, onPacket, onEnd, onError){
-    function linkControlCallbacks(sock){
         var socket = 0;
         var buffer = null;
         var packet = new Packet();
         var packets = [];
         
-        function checkPacketReadyness(){
+        function onData(buffer){
+            packet.digest(buffer);
             if(packet.isComplete()){
-                packets.push(packet);
-                packet = new Packet();
+                onPacket(socket,packet);
+            } else {
+                console.log("PARTIAL PACKET")
             }
-        }
-        
-        function onData(data){
-            while(buffer = packet.digest(buffer)){
-                checkPacketReadyness();       
-            }
-            buffer = packet.digest(data);
-            checkPacketReadyness();
-            onPacket(sock,packets);
         }
 
         this.takeOver = function (sock) {
             socket = sock;
-            socket.on('data',onData);
-            c.on('close',function(){
-                onEnd(c,"close"); 
+            if(typeof onPacket != "function"){
+                socket.pipe(onPacket);
+            } else {
+                socket.on('data',onData);
+            }
+            socket.on('close',function(){
+                onEnd(socket,"close"); 
             });
-            c.on('error',function(err){
-                onError(c,err); 
+            socket.on('error',function(err){
+                onError(socket,err); 
             });
-            c.on('timeout',function(){
-                onError(e,"timeout"); 
+            socket.on('timeout',function(e){
+                onError(socket,e,"timeout"); 
             });
-            c.on('end',function(){
-                onEnd(e,"end"); 
+            socket.on('end',function(e){
+                onEnd(socket,e,"end"); 
             });
         }
 
         this.setOnPacketCallback = function(onPkt){
             onPacket = onPkt;
         }
-    }
 }

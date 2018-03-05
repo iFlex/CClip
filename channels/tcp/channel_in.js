@@ -14,27 +14,49 @@ const net     = require("net");
 const Packet  = require("./packet");
 const PacketReader = require("./packet_reader");
 //load  - parameters
+console.log(process.argv);
 const MGT_PORT = process.argv[2];
-const PORT = 8012;
+const PORT = 8117;
 
 console.log("Connecting to mgmt port:"+MGT_PORT);
 var mgtsocket = null;
 try{
     mgtsocket = net.createConnection(MGT_PORT,function(err){
-        mgtsocket.on("data",function(data){
+        /*mgtsocket.on("data",function(data){
             console.log("MANAGEMENT DATA:"+data);
+        });*/
+        var mgmtPacketReader = new PacketReader(Packet,
+            function(sock,packet){
+                handleMgmtControlPacket(packet);
+            },function(e){
+                console.log("MGMT CONNECTION DIED");
+                process.exit(0);
+            },function(err){
+                console.log("E:"+err);
         });
-        mgtsocket.on("error",function(err){
-            console.log("E:"+err);
-        });
+        console.log(mgmtPacketReader)
+        
+        mgmtPacketReader.takeOver(mgtsocket);       
     });
 } catch(e){
     console.log("CONNECTION TO MANAGER FAILED:"+e);
     console.error(e);
 }
-
 var sockets = {}
 var unauthSoc = [];
+var expectedCons = [];
+
+const packetReader = new PacketReader(Packet,processControlPackets,onConnEnd,onConnErr);
+
+function handleMgmtControlPacket(packet){
+    var info = JSON.parse(packet.getDetails());
+    info.type = packet.getType();
+    console.log("Expecting connection")
+    console.log(info);
+    //todo clense
+    expectedCons.push(info);
+}
+
 
 function clearCallbacks(sock){
     sock.on('data',null);
@@ -65,6 +87,7 @@ function processControlPackets(sock,packet){
     if(packet.getType() == 0){
         //
     } else if(packet.getType() == 1){
+        console.log("DEETS:"+packet.getDetails());
         processFileTransferCommand(sock,packet);
     } else if(packet.getType() == 2){
         //
@@ -76,7 +99,23 @@ function linkFileTransferCallbacks(sock,writer){
 }
 
 function isConnectionExpected(sock){
-    return true;
+    var details = sock.address();
+    for(var i = 0; i < expectedCons.length; ++i ){
+        if(expectedCons[i].host == details.address && expectedCons[i].port == details.port){
+            if(expectedCons[i].type == 1){
+                var writer = fs.createWriteStream(details.file, {flags: 'w',
+                    encoding: 'binary',
+                    fd: null,
+                    mode: 0o666,
+                    autoClose: true
+                });
+                console.log("Writer:"+typeof writer);
+                return new PacketReader(Packet,writer,onConnEnd,onConnErr);
+            }
+            return packetReader;
+        }
+    }
+    return null;
 }
 
 function onConnErr(sock){
@@ -87,18 +126,18 @@ function onConnEnd(sock){
     
 }
 
-const packetReader = new PacketReader(Packet,processControlPackets,onConnEnd,onConnErr);
 const server = net.createServer((c) => {
-    if(!isConnectionExpected(c)) {
+    console.log("client connection");
+    console.log(c);
+    nextHandler = isConnectionExpected(c);
+    if(!nextHandler) {
         c.end();
         return;
     }
 
-    unauthSoc.push({socket:c})
-    console.log('client connected');
-    
+    //unauthSoc.push({socket:c})
     //autHandler.takeOver();
-    packetReader.takeOver(c);
+    nextHandler.takeOver(c);
     //
 });
 

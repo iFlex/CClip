@@ -30,7 +30,7 @@ try {
     console.error(e);
 }
 
-function filesend(RCV_PORT,RCV_HOST,FILENAME){
+function filesend(RCV_HOST,RCV_PORT,FILENAME){
     const CHUNK_SIZE = 1400;
     var socket;
     var fd;

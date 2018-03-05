@@ -2,8 +2,9 @@ module.exports = function(){
     var TYPE = null;
     var LENGTH = null;
     var DETAILS = null;
+    var buffChip = null;
 
-    var buffChip       = null;
+    var overflow       = new Buffer(0);
     function buffConcat(buff1,buff2){
         var result = new Buffer(buff1.length+buff2.length);
         buff1.copy(result,0,0,buff1.length);
@@ -17,10 +18,15 @@ module.exports = function(){
             buff.copy(newB,0,index,buff.length);
             return newB;
         }
-        return null;
+        return new Buffer(0);
     }
 
     this.digest = function(buff){
+        if(this.isComplete()){
+            overflow = buffConcat(overflow,buff);
+            return;
+        }
+
         if(buffChip){
             buff = buffConcat(buffChip,buff);
             buffChip = null;
@@ -28,13 +34,13 @@ module.exports = function(){
         
         var index = 0;
         if(TYPE === null){
-            TYPE = buff.readInt8(0);
+            TYPE = buff.readUInt8(0);
             index++;
         }
         
         if(LENGTH === null){
             if(buff.length > 2){
-                LENGTH = buff.readInt16LE(1);
+                LENGTH = buff.readUInt16BE(1);
                 index += 2;
             } else {
                 buffChip = getBuffChip(buff,index);
@@ -45,19 +51,16 @@ module.exports = function(){
         if(DETAILS === null){
             DETAILS = "";
         }
-        while(index < buff.length || DETAILS.length < LENGTH){
-            DETAILS += buff.readUInt8(index++);
-        }
-        return getBuffChip(buff,index);
+        DETAILS += buff.toString('utf8',index,LENGTH);
+        overflow = buffConcat(overflow,getBuffChip(buff,index+LENGTH));
     }
 
     this.stringify = function(){
-        var buff = new Buffer(1+LENGTH);
-        buff.writeUInt8(TYPE);
-        buff.writeUInt16BE(LENGTH);
-        for(var i = 0; i < LENGTH; ++i ){
-            buff.writeUInt8(DETAILS[i]);
-        }
+        var buff = new Buffer(3+LENGTH);
+        buff.writeUInt8(TYPE,0);
+        buff.writeUInt16BE(LENGTH,1);
+        console.log("stringify details of length:"+LENGTH+">"+DETAILS);
+        buff.write(DETAILS,3,DETAILS.length);
 
         return buff;
     }
@@ -87,5 +90,7 @@ module.exports = function(){
     }
     this.setDetails = function(details){
         DETAILS = details;
+        if(!LENGTH)
+            LENGTH = details.length
     }
 }

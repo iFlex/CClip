@@ -1,6 +1,8 @@
 /*
 Server for channel management
 */
+const Packet = require("./channels/tcp/packet");
+
 module.exports = new function(){
     //utils
     const net     = require("net");
@@ -54,7 +56,7 @@ module.exports = new function(){
             console.log("STARTING IN:Channel "+inChannelToBind);
 
             var inChann = channels[inChannelToBind].in;
-            inChann.process = instantiate(channels[inChannelToBind].rootdir,inChann.instantiation,[PORT])
+            //inChann.process = instantiate(channels[inChannelToBind].rootdir,inChann.instantiation,[PORT])
             
             if(inChann.process == null){
                 console.error("FAILED TO INSTANTIATE CHANNEL:"+inChannelToBind);
@@ -80,7 +82,7 @@ module.exports = new function(){
             }
 
             console.log("NEW CHANNEL REGISTERED WITH MANAGEMENT SERVER");
-            channels[inChannelToBind].socket = socket;
+            channels[inChannelToBind].in.socket = socket;
             configureNewInChannel(channels[inChannelToBind]);
             inChannelToBind = null;
             
@@ -104,6 +106,24 @@ module.exports = new function(){
         chandef.out.active.push(pid);
 
         return true;
+    }
+
+    this.expectFile = function(channelName, details){
+        var chandef = channels[channelName];
+        if(!chandef){
+            console.log("Inexistent channel:"+channelName);
+            return;
+        }
+        var packet = new Packet();
+        var jsndetails = {};
+        
+        for(var i = 0; i < details.length; ++i){
+            var deets = details[i].split("=");
+            jsndetails[deets[0]] = deets[1];
+        }
+        packet.setType(1);
+        packet.setDetails(JSON.stringify(jsndetails));
+        chandef.in.socket.write(packet.stringify(),"binary");
     }
 
     this.configure = function(opts){
